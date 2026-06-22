@@ -139,7 +139,7 @@ plot_dicho <- function(format_table_graph, sizes_box, subtotal1_summary, limits,
              boxsize = sizes_box,
              line.margin = 2,
              is.summary = subtotal1_summary,
-             align = c('l', 'l', 'l', 'l','c'),
+             align = c('l', 'l', 'l', 'c','c'),
              ci.vertices = TRUE,
              txt_gp = fpTxtGp(label =gpar (cex=0.9),
                               ticks = gpar(cex = 0.9, fontface="bold"),
@@ -288,13 +288,15 @@ auc_ai <- meta_auc(db_auc_ai_s)
 # print(auc_card)
 
 subtotal1_card <- table_graph(auc_card,effect_label =  "AUC", nstudies = 5)
-# subtotal1_card[1,] <- NA
+subtotal1_card[2,] <- c(NA,NA,"First group for at least one EP cardiologist", NA,NA)
 subtotal1_non <- table_graph(auc_non, effect_label =  "AUC", nstudies = 1)
 subtotal1_non <- subtotal1_non[-c(7,8),]
 subtotal1_non[,5] <- NA
 subtotal1_non[1,] <- NA
+subtotal1_non[2,] <- c(NA,NA,"Second group for non-EP cardiologist, study nor AI", NA,NA)
 subtotal1_ai <- table_graph(auc_ai, effect_label =  "AUC", nstudies = 4)
 subtotal1_ai[1,] <- NA
+subtotal1_ai[2,] <- c(NA,NA,"Third group for at leat one EP study or AI", NA,NA)
 subtotal1 <- rbind(subtotal1_card, subtotal1_non, subtotal1_ai)
 subtotal1 <- as.matrix(subtotal1)
 
@@ -338,21 +340,23 @@ sens_card <- meta_auc(db_sens_card)
 sens_ai <- meta_auc(db_sens_ai)
 
 subtotal_card <- table_graph(sens_card, effect_label = "Sensitivity", nstudies = 1)
+subtotal_card[2,] <- c(NA,NA,"First group for at least one EP cardiologist", NA,NA)
 subtotal_ai <- table_graph(sens_ai, effect_label = "Sensitivity", nstudies = 8)
+subtotal_ai[2,] <- c(NA,NA,"Third group for at leat one EP study or AI", NA,NA)
 subtotal1 <- rbind(subtotal_card, subtotal_ai)
 subtotal1[,5] <- NA
-subtotal1 <- as.matrix(subtotal1[-c(5:8,18,19),])
+subtotal1 <- as.matrix(subtotal1[-c(5:7,18,19),])
 
-sub_summary <- c(rep(T,2), rep(F, length(sens_card$pre$weights)), T, 
+sub_summary <- c(rep(T,2), rep(F, length(sens_card$pre$weights)), T, T,
                  rep(F, length(sens_ai$pre$weights)), T)
 
-sizes_dic <- c(rep(NA,2), rep(0.5, length(sens_card$pre$weights)), NA,
+sizes_dic <- c(rep(NA,2), rep(0.35, length(sens_card$pre$weights)), NA, NA,
                rep(0.5, length(sens_ai$pre$weights)), NA)
 
 subtotal1n_card <- limits_es(sens_card)
 subtotal1n_ai <- limits_es(sens_ai)
 subtotal1n <- rbind(subtotal1n_card, subtotal1n_ai)
-subtotal1n <- as.matrix(subtotal1n[-c(5:8,18,19),])
+subtotal1n <- as.matrix(subtotal1n[-c(5:7,18,19),])
 
 xticks = c(0.65,0.8,1,1.05)
 limit_x = c(0.65,1.05)
@@ -377,21 +381,23 @@ spec_card <- meta_auc(db_spec_card)
 spec_ai <- meta_auc(db_spec_ai)
 
 subtotal_card <- table_graph(spec_card, effect_label = "Specificity", nstudies = 1)
+subtotal_card[2,] <- c(NA,NA,"First group for at least one EP cardiologist", NA,NA)
 subtotal_ai <- table_graph(spec_ai, effect_label = "Specificity", nstudies = 8)
+subtotal_ai[2,] <- c(NA,NA,"Third group for at leat one EP study or AI", NA,NA)
 subtotal1 <- rbind(subtotal_card, subtotal_ai)
 subtotal1[,5] <- NA
-subtotal1 <- as.matrix(subtotal1[-c(5:8,18,19),])
+subtotal1 <- as.matrix(subtotal1[-c(5:7,18,19),])
 
-sub_summary <- c(rep(T,2), rep(F, length(spec_card$pre$weights)), T, 
+sub_summary <- c(rep(T,2), rep(F, length(spec_card$pre$weights)), T, T,
                  rep(F, length(spec_ai$pre$weights)), T)
 
-sizes_dic <- c(rep(NA,2), rep(0.5, length(spec_card$pre$weights)), NA,
+sizes_dic <- c(rep(NA,2), rep(0.35, length(spec_card$pre$weights)), NA, NA,
                rep(0.5, length(spec_ai$pre$weights)), NA)
 
 subtotal1n_card <- limits_es(spec_card)
 subtotal1n_ai <- limits_es(spec_ai)
 subtotal1n <- rbind(subtotal1n_card, subtotal1n_ai)
-subtotal1n <- as.matrix(subtotal1n[-c(5:8,18,19),])
+subtotal1n <- as.matrix(subtotal1n[-c(5:7,18,19),])
 
 xticks = c(0.25, 0.45,0.70,1,1.05)
 limit_x = c(0.25,1.05)
