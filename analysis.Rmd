@@ -1,0 +1,408 @@
+---
+title: "Meta-analysis AI algorithms against non-experts, experts, and scores"
+author: "Luis A. Figueroa, Marcelo Montero, Alisson Samaniego, et. al."
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(dirname(inputFile),'/README.md')) })
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(rmarkdown)
+library(metafor)
+library(readxl)
+library(forestplot)
+library(rmarkdown)
+
+knitr::opts_chunk$set(fig.path = "Figures/", dev='svg')
+
+```
+
+<i> Analysis and visualization developed by [Luis A. Figueroa](https://www.linkedin.com/in/luis-figueroa-200851374/) </i>
+
+We built this project to show the meta-analysis AI algorithms (RWPT-II algorithm, Basel algorithm, WCT Formula, WCT Formula II, VT Prediction Model, Solo Model, Paired Model, VT score, Bayesian algorithm) against Gold Standard (Humans experts <electrophysiology>, humans non-experts <general>, and score algorithms) allowing transparency and reproducibility.
+
+
+
+```{r functions_md&or, echo=FALSE, message=FALSE, warning=FALSE}
+meta_auc <- function(database, effect = "CLES") {
+  db <- database
+  # Inicializar columnas
+  db$yi <- NA
+  db$vi <- NA
+  db$source <- "NR"
+  
+  # Usar AUC-acc-sens-spec ajustados (es, es_lw, es_up) si están disponibles
+  adj_idx <- which(!is.na(db$es) & !is.na(db$es_lw) & !is.na(db$es_up))
+  if(length(adj_idx) > 0) {
+    db$yi[adj_idx] <- log(db$es[adj_idx])
+    db$vi[adj_idx] <- ((log(db$es_up[adj_idx]) - log(db$es_lw[adj_idx])) / (2 * qnorm(0.975)))^2
+    db$source[adj_idx] <- "adjusted"
+  }
+  
+  # Ordenar por tamaño del efecto
+  db <- db[order(db$yi), ]
+  
+  # Realizar meta-análisis
+  ma <- rma(yi = db$yi, vi = db$vi, measure = effect, data = db, method = 'REML')
+  exp <- predict(ma, transf = exp)
+  
+  # Calcular pesos
+  db$weights <- weights(ma)
+  db$w <- paste(formatC(db$weights, format = 'f', digits = 1), '%')
+  
+  # Resultado del meta-análisis
+  list(
+    pre = db,
+    ma = ma,
+    exp = exp,
+    effect_type = effect,
+    effect_label = "CLES/AUC")
+}
+
+limits_es <- function(ma_result){
+    df <- data.frame(
+  es = c(rep(NA, 2), ma_result$pre$es, NA, ma_result$exp$pred, NA),
+  lower = c(rep(NA, 2), ma_result$pre$es_lw, NA, ma_result$exp$ci.lb, NA),
+  upper = c(rep(NA, 2), ma_result$pre$es_up, NA, ma_result$exp$ci.ub, NA)
+    )
+    return(df)
+  }
+
+
+table_graph <- function(ma_result, effect_label = "Effect size", nstudies = 2) {
+  b <- data.frame(
+    Author = c(paste0("Study"),NA,
+      as.character(ma_result$pre$study),NA,
+      paste("Overall", effect_label, "for", nstudies, "studies"),
+      paste0(
+        "(Tau^2 = ", formatC(ma_result$ma$tau2, digits = 2, format = "f"),
+        ", df = ", ma_result$ma$k - ma_result$ma$p,
+        ", p ", ifelse(
+          ma_result$ma$QEp < 0.001,
+          "< 0.001",
+          paste0("= ", formatC(ma_result$ma$QEp, digits = 3, format = "f"))
+        ),
+        "; I^2 = ", formatC(ma_result$ma$I2, digits = 1, format = "f"), "%)"
+      )
+    ),
+    
+    Algorithm = c(paste0("AI Algorithm tested"),NA,
+                  as.character(ma_result$pre$ai_algorithm_used), NA, NA, NA),
+    
+    Comparator = c(paste0("Reference Standard"),NA,
+                   as.character(ma_result$pre$comparator), NA, NA, NA),
+    
+    Effect = c(paste(effect_label, "(95% CI)"),NA,
+      paste0(
+        formatC(ma_result$pre$es, format = "f", digits = 2),
+        " (",
+        formatC(ma_result$pre$es_lw, format = "f", digits = 2),
+        "-",
+        formatC(ma_result$pre$es_up, format = "f", digits = 2),
+        ")"
+      ),NA,
+      paste0(
+        formatC(ma_result$exp$pred, format = "f", digits = 2),
+        " (",
+        formatC(ma_result$exp$ci.lb, format = "f", digits = 2),
+        "-",
+        formatC(ma_result$exp$ci.ub, format = "f", digits = 2),
+        ")"
+      ),
+      NA
+    ),
+    
+    Weight = c(paste0("Weight(%)"), NA, ma_result$pre$w, NA, NA, NA),
+    
+    check.names = FALSE
+  )
+  
+  return(b)
+}
+
+plot_dicho <- function(format_table_graph, sizes_box, subtotal1_summary, limits, 
+                       xticks, xlog = TRUE, limit_x, grids, ma= TRUE){
+   if (ma == TRUE){
+     cols <- 1:6
+   } else {
+     cols <- 1:6
+   }
+  plotito <- forestplot(format_table_graph,
+             graph.pos = 4,
+             zero = 1,
+             limits,
+             new_page = TRUE,
+             colgap = unit(5, "mm"),
+             hrzl_lines = list("2" = gpar (lwd=1, columns=cols, col="black")),
+             lineheight=unit(0.7,'cm'),
+             boxsize = sizes_box,
+             line.margin = 2,
+             is.summary = subtotal1_summary,
+             align = c('l', 'l', 'l', 'l','c'),
+             ci.vertices = TRUE,
+             txt_gp = fpTxtGp(label =gpar (cex=0.9),
+                              ticks = gpar(cex = 0.9, fontface="bold"),
+                              summary = gpar(cex = 0.9),
+                              xlab = gpar(cex=0.9)),
+             xticks = xticks,
+             xlog=xlog,
+             clip = limit_x,
+             grid = grids,
+             lwd.xaxis = 1,
+             lwd.ci = 2.2,
+             lwd.zero = 2,
+             graphwidth = unit(10,"cm"),
+             col=fpColors(box="black",line="grey", zero = 'dodgerblue4', axes="grey20", summary="black"))
+  
+  return(plotito)
+}
+
+
+```
+
+
+```{r cleaning, include = FALSE}
+raw_data <- read_excel("Dataset AI WCT AlgorithmsSS.xlsx")
+names(raw_data) <- c("study", "id_study", "total_patients", "ai_algorithm_used", 
+                     "model_architecture", "n_test", "paired_solo_model", "val_meth",
+                     "ep_study_confirm", "comparator", "comparator_detailed",
+                     "metrics", "auc", "lw_auc", "up_auc", "ppv", "lw_ppv", "up_ppv",
+                     "npv", "lw_npv", "up_npv", "sens", "lw_sens", "up_sens",
+                     "specif", "lw_specif", "up_specif", "acc", "lw_acc", 
+                     "up_acc", "auc_valset", "acc_valset")
+db <- raw_data %>% 
+  select(-c(id_study, model_architecture, paired_solo_model, val_meth, ep_study_confirm,
+            comparator_detailed, metrics, auc_valset, acc_valset)) %>%
+  mutate(ai_algorithm_used = 
+           ifelse(ai_algorithm_used == "VCG model\r\n", "VCG model",
+           ifelse(ai_algorithm_used == "Random forest\r\n", "Random forest",
+           ifelse(ai_algorithm_used == "\r\nSupport vector machine", "Support vector machine",
+           ifelse(ai_algorithm_used == "CNN-based deep learning model using ZeroLess-DARTS neural architecture search", 'CNN using ZeroLess-DARTS search', ai_algorithm_used))))) %>%
+  mutate(across(c(study, ai_algorithm_used, comparator), as.factor)) %>%
+  mutate(across(-c(study, ai_algorithm_used, comparator), as.numeric))
+
+cols_general_info <- c("study", "total_patients", "ai_algorithm_used", 
+                     "n_test", "comparator")
+cols_format <- c("es", "es_lw", "es_up")
+
+db_auc <- db %>%
+  select(cols_general_info, auc, lw_auc, up_auc) %>%
+  setNames(c(cols_general_info, cols_format)) %>%
+  filter(if_all(all_of(cols_format[!is.na(cols_format)]), ~ !is.na(.)))
+
+db_sens <- db %>%
+  select(cols_general_info, sens, lw_sens, up_sens) %>%
+  setNames(c(cols_general_info, cols_format)) %>% 
+  filter(if_all(all_of(cols_format[!is.na(cols_format)]), ~ !is.na(.)))
+
+db_spec <- db %>%
+  select(cols_general_info, specif, lw_specif, up_specif) %>%
+  setNames(c(cols_general_info, cols_format)) %>% 
+  filter(if_all(all_of(cols_format[!is.na(cols_format)]), ~ !is.na(.)))
+
+# db_acc <- db %>%
+#   select(cols_general_info, acc, lw_acc, up_acc) %>%
+#   setNames(c(cols_general_info, cols_format)) %>% 
+#   filter(if_all(all_of(cols_format[!is.na(cols_format)]), ~ !is.na(.)))
+
+
+### AUC
+# EP-Cardiologist is only a part of, or all of gold standard
+some_ep_cardio <- c("EP cardiologists", "EP cardiologists + EP study + IA",
+                    "EP cardiologists + Non EP cardiologists", 
+                    "EP cardiologists + Non EP cardiologists + EP study +IA")
+db_auc_card <- filter(db_auc, comparator %in% some_ep_cardio)
+
+# Only Non-EP
+db_auc_non <- filter(db_auc, comparator == "Non-EP cardiologists")
+
+# AI is only a part of, or all of gold standard
+# EP study is or all of gold standard #!!! In this case is the same as the last
+some_ai_std <- c("EP cardiologists + EP study + IA",
+                 "EP cardiologists + Non EP cardiologists + EP study +IA",
+                 "EP study + IA")
+db_auc_ai <- filter(db_auc, comparator %in% some_ai_std)
+
+
+# ### ACC
+# # EP-Cardiologist is only a part of, or all of gold standard
+# db_acc_card <- filter(db_acc, comparator %in% some_ep_cardio)
+# 
+# # Only Non-EP
+# db_acc_non <- filter(db_acc, comparator == "Non-EP cardiologists")
+# 
+# # AI is only a part of, or all of gold standard
+# # EP study is or all of gold standard #!!! In this case is the same as the last
+# db_acc_ai <- filter(db_acc, comparator %in% some_ai_std)
+
+
+### SENS
+# EP-Cardiologist is only a part of, or all of gold standard #!!! there isn't
+db_sens_card <- filter(db_sens, comparator %in% some_ep_cardio)
+
+# Only Non-EP #!! no results
+db_sens_non <- filter(db_sens, comparator == "Non-EP cardiologists")
+
+# AI is only a part of, or all of gold standard
+# EP study is or all of gold standard #!!! In this case is the same as the last
+db_sens_ai <- filter(db_sens, comparator %in% some_ai_std)
+
+
+### SPECIF
+# EP-Cardiologist is only a part of, or all of gold standard
+db_spec_card <- filter(db_spec, comparator %in% some_ep_cardio)
+
+# Only Non-EP #!!! no results
+db_spec_non <- filter(db_spec, comparator == "Non-EP cardiologists")
+
+# AI is only a part of, or all of gold standard
+# EP study is or all of gold standard #!!! In this case is the same as the last
+db_spec_ai <- filter(db_spec, comparator %in% some_ai_std)
+
+
+```
+
+### METHODOLOGY
+
+We conducted a meta-analysis focusing on performance metrics reported according to three different reference standards. AI algorithms were compared with electrophysiologists (EP), non-EP cardiologists, electrophysiologic studies, and other AI models. At least four studies provided sufficient information to calculate pooled effect sizes for each comparison.
+
+Area under the receiver operating characteristic curve (AUC) values and their corresponding 95% confidence intervals were extracted from the included studies, and a pooled estimate was obtained using a Random-Effects Model. true positives (TP), false positives (FP), false negatives (FN), and true negatives (TN) were not always available. Forest plots were constructed to summarize pooled estimates and, when available, sensitivity and specificity. Sensitivity analyses were performed when multiple AI models were evaluated in the same study population.
+
+Statistical analyses were performed using R 4.4.2 and RStudio. `metafor` and `forestplot` packages were used to perform the meta-analyses and generate graphical summaries.
+
+
+### Forest plots
+
+<details>
+<summary> AUC for all reference standards </summary>
+
+```{r auc_card, echo=FALSE, fig.height=7.5, fig.width=17, message=FALSE, warning=FALSE}
+### SENSITIVE ANALYSIS
+db_auc_card_s <- db_auc_card[c(1:2,4, 8,9),] # We prove per each model of Kashou, 2022
+auc_card <- meta_auc(db_auc_card_s)
+# print(auc_card)
+auc_non <- meta_auc(db_auc_non)
+db_auc_ai_s <- db_auc_ai[c(1:2,7,12),] # We prove per each model of Kashou, 2022
+auc_ai <- meta_auc(db_auc_ai_s)
+# print(auc_card)
+
+subtotal1_card <- table_graph(auc_card,effect_label =  "AUC", nstudies = 5)
+# subtotal1_card[1,] <- NA
+subtotal1_non <- table_graph(auc_non, effect_label =  "AUC", nstudies = 1)
+subtotal1_non <- subtotal1_non[-c(7,8),]
+subtotal1_non[,5] <- NA
+subtotal1_non[1,] <- NA
+subtotal1_ai <- table_graph(auc_ai, effect_label =  "AUC", nstudies = 4)
+subtotal1_ai[1,] <- NA
+subtotal1 <- rbind(subtotal1_card, subtotal1_non, subtotal1_ai)
+subtotal1 <- as.matrix(subtotal1)
+
+sub_summary_card <- c(rep(T,2), rep(F, length(auc_card$pre$weights)), rep(T, 3))
+sub_summary_non <- c(rep(T,2), rep(F, length(auc_non$pre$weights)), T) #rep(T, 3))
+sub_summary_ai <- c(rep(T,2), rep(F, length(auc_ai$pre$weights)), rep(T, 3))
+sub_summary <- append(sub_summary_card, c(sub_summary_non, sub_summary_ai))
+
+sizes_dic_card <- c(rep(NA,2), 0.01*(auc_card$pre$weights), NA, 1, NA)
+sizes_dic_non <- c(rep(NA,2), rep(0.5, length(auc_non$pre$weights)), NA)#, 1, NA)
+sizes_dic_ai <- c(rep(NA,2), 0.01*(auc_ai$pre$weights), NA, 1, NA)
+sizes_dic <- append(sizes_dic_card, c(sizes_dic_non, sizes_dic_ai))
+
+subtotal1n_card <- limits_es(auc_card)
+subtotal1n_non <- limits_es(auc_non)
+subtotal1n_non <- subtotal1n_non[-c(7,8),]
+subtotal1n_ai <- limits_es(auc_ai)
+subtotal1n <- rbind(subtotal1n_card, subtotal1n_non, subtotal1n_ai)
+
+xticks = c(0.85,0.92,1,1.05)
+limit_x = c(0.85,1.05)
+grids = c(0.85,0.92,1.05)
+
+plot_auc <- plot_dicho(format_table_graph = subtotal1, sizes_box = sizes_dic,
+                       subtotal1_summary = sub_summary,
+                        limits = subtotal1n, xticks = xticks, limit_x = limit_x, 
+                        grids = grids, xlog = TRUE, ma=FALSE)
+
+plot_auc
+```
+
+</details>
+
+
+<details>
+<summary> Sensitivity for all reference standards </summary>
+
+```{r sens_results, echo=FALSE, fig.height=5, fig.width=17, message=FALSE, warning=FALSE}
+#one study for each measure
+sens_card <- meta_auc(db_sens_card)
+sens_ai <- meta_auc(db_sens_ai)
+
+subtotal_card <- table_graph(sens_card, effect_label = "Sensitivity", nstudies = 1)
+subtotal_ai <- table_graph(sens_ai, effect_label = "Sensitivity", nstudies = 8)
+subtotal1 <- rbind(subtotal_card, subtotal_ai)
+subtotal1[,5] <- NA
+subtotal1 <- as.matrix(subtotal1[-c(5:8,18,19),])
+
+sub_summary <- c(rep(T,2), rep(F, length(sens_card$pre$weights)), T, 
+                 rep(F, length(sens_ai$pre$weights)), T)
+
+sizes_dic <- c(rep(NA,2), rep(0.5, length(sens_card$pre$weights)), NA,
+               rep(0.5, length(sens_ai$pre$weights)), NA)
+
+subtotal1n_card <- limits_es(sens_card)
+subtotal1n_ai <- limits_es(sens_ai)
+subtotal1n <- rbind(subtotal1n_card, subtotal1n_ai)
+subtotal1n <- as.matrix(subtotal1n[-c(5:8,18,19),])
+
+xticks = c(0.65,0.8,1,1.05)
+limit_x = c(0.65,1.05)
+grids = c(0.65,0.8,1.05)
+
+plot_sens <- plot_dicho(format_table_graph = subtotal1, sizes_box = sizes_dic,
+                        subtotal1_summary = sub_summary,
+                        limits = subtotal1n, xticks = xticks, limit_x = limit_x, 
+                        grids = grids, xlog = TRUE, ma = FALSE)
+
+plot_sens
+```
+</details>
+
+
+<details>
+<summary> Specificity for all reference standards </summary>
+
+```{r spec_results, echo=FALSE, fig.height=5, fig.width=17, message=FALSE, warning=FALSE}
+#one study for each measure
+spec_card <- meta_auc(db_spec_card)
+spec_ai <- meta_auc(db_spec_ai)
+
+subtotal_card <- table_graph(spec_card, effect_label = "Specificity", nstudies = 1)
+subtotal_ai <- table_graph(spec_ai, effect_label = "Specificity", nstudies = 8)
+subtotal1 <- rbind(subtotal_card, subtotal_ai)
+subtotal1[,5] <- NA
+subtotal1 <- as.matrix(subtotal1[-c(5:8,18,19),])
+
+sub_summary <- c(rep(T,2), rep(F, length(spec_card$pre$weights)), T, 
+                 rep(F, length(spec_ai$pre$weights)), T)
+
+sizes_dic <- c(rep(NA,2), rep(0.5, length(spec_card$pre$weights)), NA,
+               rep(0.5, length(spec_ai$pre$weights)), NA)
+
+subtotal1n_card <- limits_es(spec_card)
+subtotal1n_ai <- limits_es(spec_ai)
+subtotal1n <- rbind(subtotal1n_card, subtotal1n_ai)
+subtotal1n <- as.matrix(subtotal1n[-c(5:8,18,19),])
+
+xticks = c(0.25, 0.45,0.70,1,1.05)
+limit_x = c(0.25,1.05)
+grids = c(0.25, 0.45,0.70,1.05)
+
+plot_spec <- plot_dicho(format_table_graph = subtotal1, sizes_box = sizes_dic,
+                        subtotal1_summary = sub_summary,
+                        limits = subtotal1n, xticks = xticks, limit_x = limit_x, 
+                        grids = grids, xlog = TRUE, ma = FALSE)
+
+plot_spec
+```
+
+</details>
