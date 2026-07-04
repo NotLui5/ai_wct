@@ -179,8 +179,19 @@ db <- raw_data %>%
            ifelse(ai_algorithm_used == "Random forest\r\n", "Random forest",
            ifelse(ai_algorithm_used == "\r\nSupport vector machine", "Support vector machine",
            ifelse(ai_algorithm_used == "CNN-based deep learning model using ZeroLess-DARTS neural architecture search", 'CNN using ZeroLess-DARTS search', ai_algorithm_used))))) %>%
+    mutate(comparator = 
+           ifelse(comparator == "EP study + IA", "EP study + AI", 
+           ifelse(comparator == "EP cardiologists + EP study + IA", 
+                  "EP cardiologists + EP study + AI",
+           ifelse(comparator == "EP cardiologists + Non EP cardiologists + EP study +IA", 
+                  "EP cardiologists + Non EP cardiologists + EP study +AI",
+           ifelse(comparator == "EP cardiologists + EP study + IA",
+                  "EP cardiologists + EP study + AI",
+           ifelse(comparator == "EP cardiologists + Non EP cardiologists + EP study +IA",
+                  "EP cardiologists + Non EP cardiologists + EP study +AI", 
+                  comparator)))))) %>%
   mutate(across(c(study, ai_algorithm_used, comparator), as.factor)) %>%
-  mutate(across(-c(study, ai_algorithm_used, comparator), as.numeric))
+  mutate(across(-c(study, ai_algorithm_used, comparator), as.numeric)) 
 
 cols_general_info <- c("study", "total_patients", "ai_algorithm_used", 
                      "n_test", "comparator")
@@ -209,9 +220,9 @@ db_spec <- db %>%
 
 ### AUC
 # EP-Cardiologist is only a part of, or all of gold standard
-some_ep_cardio <- c("EP cardiologists", "EP cardiologists + EP study + IA",
+some_ep_cardio <- c("EP cardiologists", "EP cardiologists + EP study + AI",
                     "EP cardiologists + Non EP cardiologists", 
-                    "EP cardiologists + Non EP cardiologists + EP study +IA")
+                    "EP cardiologists + Non EP cardiologists + EP study +AI")
 db_auc_card <- filter(db_auc, comparator %in% some_ep_cardio)
 
 # Only Non-EP
@@ -219,9 +230,9 @@ db_auc_non <- filter(db_auc, comparator == "Non-EP cardiologists")
 
 # AI is only a part of, or all of gold standard
 # EP study is or all of gold standard #!!! In this case is the same as the last
-some_ai_std <- c("EP cardiologists + EP study + IA",
-                 "EP cardiologists + Non EP cardiologists + EP study +IA",
-                 "EP study + IA")
+some_ai_std <- c("EP cardiologists + EP study + AI",
+                 "EP cardiologists + Non EP cardiologists + EP study +AI",
+                 "EP study + AI")
 db_auc_ai <- filter(db_auc, comparator %in% some_ai_std)
 
 
