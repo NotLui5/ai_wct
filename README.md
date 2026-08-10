@@ -23,12 +23,16 @@ each comparison.
 
 Area under the receiver operating characteristic curve (AUC) values and
 their corresponding 95% confidence intervals were extracted from the
-included studies, and a pooled estimate was obtained using a
-Random-Effects Model. true positives (TP), false positives (FP), false
-negatives (FN), and true negatives (TN) were not always available.
-Forest plots were constructed to summarize pooled estimates and, when
-available, sensitivity and specificity. Sensitivity analyses were
-performed when multiple AI models were evaluated in the same study
+included studies, and pooled estimates were obtained using
+random-effects models. Complete 2 × 2 diagnostic contingency tables
+(true positives \[TP\], false positives \[FP\], false negatives \[FN\],
+and true negatives \[TN\]) were not consistently reported; therefore, a
+hierarchical diagnostic test accuracy meta-analysis jointly modeling
+sensitivity and specificity could not be performed. When reported,
+sensitivity and specificity were synthesized separately using
+random-effects models and displayed both individually and in a coupled
+forest plot to facilitate study-level comparison. Sensitivity analyses
+were performed when multiple AI models were evaluated in the same study
 population.
 
 Statistical analyses were performed using R 4.4.2 and RStudio. `metafor`
@@ -52,19 +56,9 @@ AUC for all reference standards
 
 <summary>
 
-Sensitivity for all reference standards
+Coupled Forest Plot to show sensitivity and specificity
 </summary>
 
-![](Figures/sens_results-1.svg)<!-- -->
-</details>
-
-<details>
-
-<summary>
-
-Specificity for all reference standards
-</summary>
-
-![](Figures/spec_results-1.svg)<!-- -->
+![](Figures/coupled_sens_spec-1.svg)<!-- -->
 
 </details>
