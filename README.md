@@ -62,3 +62,26 @@ Coupled Forest Plot to show sensitivity and specificity
 ![](Figures/coupled_sens_spec-1.svg)<!-- -->
 
 </details>
+
+ForestPlot separated:
+
+<details>
+
+<summary>
+
+Sensitivity for all reference standards
+</summary>
+
+![](Figures/sens_results-1.svg)<!-- -->
+</details>
+
+<details>
+
+<summary>
+
+Specificity for all reference standards
+</summary>
+
+![](Figures/spec_results-1.svg)<!-- -->
+
+</details>
