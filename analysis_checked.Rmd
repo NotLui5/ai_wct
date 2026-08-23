@@ -458,7 +458,7 @@ Statistical analyses were performed using R 4.4.2 and RStudio. `metafor` and `fo
 <details>
 <summary> AUC for all reference standards </summary>
 
-```{r auc_card, echo=FALSE, fig.height=7.5, fig.width=17, message=FALSE, warning=FALSE}
+```{r auc_card, echo=FALSE, fig.height=7.5, fig.width=20, message=FALSE, warning=FALSE}
 ### SENSITIVE ANALYSIS
 db_auc_card_s <- db_auc_card[c(1:2,4, 8,9),] # We prove per each model of Kashou, 2022
 auc_card <- meta_auc(db_auc_card_s)
@@ -514,7 +514,7 @@ plot_auc
 <details>
 <summary> Coupled Forest Plot to show sensitivity and specificity </summary>
 
-```{r coupled_sens_spec, echo=FALSE, fig.height=8, fig.width=20, message=FALSE, warning=FALSE}
+```{r coupled_sens_spec, echo=FALSE, fig.height=4.5, fig.width=20, message=FALSE, warning=FALSE}
 sens_card <- meta_auc(db_sens_card)
 sens_ai <- meta_auc(db_sens_ai)
 
@@ -546,7 +546,7 @@ ForestPlot separated:
 <details>
 <summary> Sensitivity for all reference standards </summary>
 
-```{r sens_results, echo=FALSE, fig.height=5, fig.width=17, message=FALSE, warning=FALSE}
+```{r sens_results, echo=FALSE, fig.height=4.6, fig.width=17, message=FALSE, warning=FALSE}
 #one study for each measure
 sens_card <- meta_auc(db_sens_card)
 sens_ai <- meta_auc(db_sens_ai)
@@ -585,7 +585,7 @@ plot_sens
 <details>
 <summary> Specificity for all reference standards </summary>
 
-```{r spec_results, echo=FALSE, fig.height=5, fig.width=17, message=FALSE, warning=FALSE}
+```{r spec_results, echo=FALSE, fig.height=4.6, fig.width=17, message=FALSE, warning=FALSE}
 #one study for each measure
 spec_card <- meta_auc(db_spec_card)
 spec_ai <- meta_auc(db_spec_ai)
@@ -609,8 +609,8 @@ subtotal1n_ai <- limits_es(spec_ai)
 subtotal1n <- rbind(subtotal1n_card, subtotal1n_ai)
 subtotal1n <- as.matrix(subtotal1n[-c(5:7,18,19),])
 
-xticks = c(0.6,0.7,0.8,0.9,1)
-limit_x = c(0.6,1)
+xticks = c(0.3,0.5,0.75,1)
+limit_x = c(0.3,1)
 
 plot_spec <- plot_dicho(format_table_graph = subtotal1, sizes_box = sizes_dic,
                         subtotal1_summary = sub_summary,
